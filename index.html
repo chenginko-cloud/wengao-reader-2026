@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>全部文稿总库 · 选择适合设备的界面</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;
+ background:#f6f7f9;color:#1f2328;font:16px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+main{width:min(100%,420px);padding:28px;background:#fff;border:1px solid #e8eaee;border-radius:16px;text-align:center}
+h1{margin:0 0 8px;font-size:21px}p{margin:0 0 20px;color:#5c6570;font-size:14px}nav{display:flex;gap:10px}
+a{flex:1;padding:11px;border-radius:10px;background:#2b5cd9;color:#fff;text-decoration:none;font-weight:600}
+a+a{background:#eaf0ff;color:#2b5cd9}
+</style>
+<script>
+(function(){
+  var query=new URLSearchParams(location.search),forced=query.get('v');
+  var ua=navigator.userAgent||'';
+  var mobileUA=/Android|iPhone|iPod|iPad|Mobile|HarmonyOS|Tablet|Windows Phone/i.test(ua);
+  var iPadOS=/Macintosh/.test(ua)&&navigator.maxTouchPoints>1;
+  var touch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  var narrow=Math.min(screen.width||9999,innerWidth||9999)<768;
+  var mobile=mobileUA||iPadOS||(narrow&&touch);
+  var version=forced==='mobile'||forced==='desktop'?forced:(mobile?'mobile':'desktop');
+  location.replace(version+'.html');
+})();
+</script>
+</head>
+<body>
+<main>
+  <h1>全部文稿总库</h1>
+  <p>正在识别设备并进入文稿库。如未自动跳转，请手动选择。</p>
+  <nav><a href="mobile.html">手机版</a><a href="desktop.html">桌面版</a></nav>
+</main>
+</body>
+</html>
