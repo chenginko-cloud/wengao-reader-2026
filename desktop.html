@@ -120,8 +120,6 @@ button{cursor:pointer;border:0;background:none}
 .art h1{font-size:1.42em;line-height:1.5;margin:0 0 16px;letter-spacing:.2px}
 .art .meta{display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--tx3);
   padding-bottom:16px;border-bottom:1px solid var(--line2);margin-bottom:20px}
-.art .lead{background:#f7f9fc;border-left:3px solid var(--accent);padding:12px 16px;
-  border-radius:0 6px 6px 0;font-size:.88em;color:#3c4656;margin-bottom:22px;line-height:1.8}
 .art p{margin:0 0 1.02em;text-align:justify;word-break:break-word}
 .loading{padding:80px;text-align:center;color:var(--tx3);font-size:14px;line-height:2}
 .hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f2328;color:#fff;
@@ -523,10 +521,7 @@ function openR(i){
     const txt=raw||"（本篇无正文）";
     const paras=txt.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean)
                    .map(p=>"<p>"+esc(p).replace(/\n/g,"<br>")+"</p>").join("");
-    // 若摘要本身就是正文开头（老古来源），不再重复展示提要块
-    const nz=s=>String(s).replace(/\s+/g,"");
-    const showLead=it.s && nz(txt).indexOf(nz(it.s).slice(0,40))!==0;
-    $("#rbody").innerHTML=head+(showLead?'<div class="lead">'+esc(it.s)+'</div>':"")+paras+"</div>";
+    $("#rbody").innerHTML=head+paras+"</div>";
     $("#rbody").scrollTop=0;
   }).catch(e=>{
     $("#rbody").innerHTML=head+'<div class="loading">正文解压失败：'+esc(e.message)+"</div>";
