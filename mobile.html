@@ -19,7 +19,7 @@
   var coarse=matchMedia("(pointer: coarse)").matches||matchMedia("(any-pointer: coarse)").matches;
   var mobile=mobileUA||uaDataMobile||iPadOS||innerWidth<820||
     (coarse&&Math.min(screen.width||9999,screen.height||9999)<1100);
-  if(!mobile)location.replace("desktop.html?rev=device-auto-4");
+  if(!mobile)location.replace("desktop.html?rev=drawer-swipe-5");
 })();
 </script>
 <style>
@@ -80,6 +80,11 @@ body.drawn .scrim{opacity:1;pointer-events:auto}
   transform:translateX(-101%);transition:transform .28s cubic-bezier(.32,.72,0,1);
   display:flex;flex-direction:column;box-shadow:6px 0 30px rgba(16,24,40,.16)}
 body.drawn .drawer{transform:none}
+.drawerEdge{position:absolute;right:-14px;top:0;bottom:0;width:30px;z-index:2;
+  pointer-events:none;touch-action:pan-y}
+body.drawn .drawerEdge{pointer-events:auto}
+.drawerEdge::after{content:"";position:absolute;right:11px;top:45%;width:3px;height:42px;
+  border-radius:3px;background:#c3cbd6;opacity:.72}
 .dhead{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;
   border-bottom:1px solid var(--line2);padding-top:calc(16px + env(safe-area-inset-top))}
 .dhead h2{margin:0;font-size:16px;font-weight:700}
@@ -166,6 +171,7 @@ body.drawn .filterEdge,body.reading .filterEdge{pointer-events:none;visibility:h
 
 <div class="scrim" id="scrim"></div>
 <aside class="drawer">
+  <div class="drawerEdge" id="drawerEdge" aria-hidden="true"></div>
   <div class="dhead"><h2>筛选与检索</h2><span style="flex:1"></span>
     <button class="cls" id="swapv" style="display:none">桌面版 ›</button>
     <button class="cls" id="closeD">✕</button></div>
@@ -454,6 +460,22 @@ filterEdge.addEventListener("pointermove",e=>{
 });
 filterEdge.addEventListener("pointerup",()=>{filterSwipe=null;});
 filterEdge.addEventListener("pointercancel",()=>{filterSwipe=null;});
+/* 筛选抽屉右边缘向左滑动，返回主页面。 */
+const drawerEdge=$("#drawerEdge");
+let drawerSwipe=null;
+drawerEdge.addEventListener("pointerdown",e=>{
+  if(e.pointerType!=="touch"||!document.body.classList.contains("drawn")) return;
+  drawerSwipe={id:e.pointerId,x:e.clientX,y:e.clientY};
+  try{drawerEdge.setPointerCapture(e.pointerId);}catch(_){}
+});
+drawerEdge.addEventListener("pointermove",e=>{
+  if(!drawerSwipe||e.pointerId!==drawerSwipe.id) return;
+  const dx=e.clientX-drawerSwipe.x,dy=e.clientY-drawerSwipe.y;
+  if(Math.abs(dy)>Math.abs(dx)*1.2&&Math.abs(dy)>12){drawerSwipe=null;return;}
+  if(dx < -55&&-dx>Math.abs(dy)*1.2){drawerSwipe=null;closeD();}
+});
+drawerEdge.addEventListener("pointerup",()=>{drawerSwipe=null;});
+drawerEdge.addEventListener("pointercancel",()=>{drawerSwipe=null;});
 $("#resetAll").onclick=()=>{
   ["src","big","topic","blogger","series","bucket","tag"].forEach(k=>S[k].clear());
   S.kw=""; $("#kw").value=""; $("#deep").checked=false; S.deep=false;
@@ -614,7 +636,7 @@ edge.addEventListener("pointercancel",endDrag);
 if(location.protocol==="http:"||location.protocol==="https:"){
   const sv=$("#swapv");
   sv.style.display="inline-block";
-  sv.onclick=()=>{ location.href="index.html?v=desktop&rev=device-auto-4"; };
+  sv.onclick=()=>{ location.href="index.html?v=desktop&rev=drawer-swipe-5"; };
 }
 render();
 </script>

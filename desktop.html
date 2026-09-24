@@ -17,7 +17,7 @@
   var coarse=matchMedia("(pointer: coarse)").matches||matchMedia("(any-pointer: coarse)").matches;
   var mobile=mobileUA||uaDataMobile||iPadOS||innerWidth<820||
     (coarse&&Math.min(screen.width||9999,screen.height||9999)<1100);
-  if(mobile)location.replace("mobile.html?rev=device-auto-4");
+  if(mobile)location.replace("mobile.html?rev=drawer-swipe-5");
 })();
 </script>
 <style>
@@ -175,7 +175,7 @@ button{cursor:pointer;border:0;background:none}
     <select id="per">
       <option>20</option><option selected>50</option><option>100</option><option>200</option>
     </select>
-    <a class="swapv" id="swapv" href="index.html?v=mobile&rev=device-auto-4">手机版 ›</a>
+    <a class="swapv" id="swapv" href="index.html?v=mobile&rev=drawer-swipe-5">手机版 ›</a>
   </div>
   <div class="crumbs" id="crumbs"></div>
   <div class="listwrap" id="listwrap"></div>
