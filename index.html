@@ -23,7 +23,7 @@ a+a{background:#eaf0ff;color:#2b5cd9}
   var narrow=Math.min(screen.width||9999,innerWidth||9999)<768;
   var mobile=mobileUA||iPadOS||(narrow&&touch);
   var version=forced==='mobile'||forced==='desktop'?forced:(mobile?'mobile':'desktop');
-  location.replace(version+'.html');
+  location.replace(version+'.html?rev=no-summary-2');
 })();
 </script>
 </head>
@@ -31,7 +31,7 @@ a+a{background:#eaf0ff;color:#2b5cd9}
 <main>
   <h1>全部文稿总库</h1>
   <p>正在识别设备并进入文稿库。如未自动跳转，请手动选择。</p>
-  <nav><a href="mobile.html">手机版</a><a href="desktop.html">桌面版</a></nav>
+  <nav><a href="mobile.html?rev=no-summary-2">手机版</a><a href="desktop.html?rev=no-summary-2">桌面版</a></nav>
 </main>
 </body>
 </html>
