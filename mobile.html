@@ -8,6 +8,20 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>全部文稿总库 · 手机版</title>
+<script>
+(function(){
+  if(location.protocol!=="http:"&&location.protocol!=="https:")return;
+  if(new URLSearchParams(location.search).get("mode")==="mobile")return;
+  var ua=navigator.userAgent||"";
+  var mobileUA=/Android|iPhone|iPod|iPad|Mobile|HarmonyOS|Tablet|Windows Phone/i.test(ua);
+  var iPadOS=/Macintosh/.test(ua)&&navigator.maxTouchPoints>1;
+  var uaDataMobile=!!(navigator.userAgentData&&navigator.userAgentData.mobile);
+  var coarse=matchMedia("(pointer: coarse)").matches||matchMedia("(any-pointer: coarse)").matches;
+  var mobile=mobileUA||uaDataMobile||iPadOS||innerWidth<820||
+    (coarse&&Math.min(screen.width||9999,screen.height||9999)<1100);
+  if(!mobile)location.replace("desktop.html?rev=device-auto-4");
+})();
+</script>
 <style>
 :root{
   --bg:#fff; --bg2:#f6f7f9; --line:#e8eaee; --line2:#f0f2f5;
@@ -600,7 +614,7 @@ edge.addEventListener("pointercancel",endDrag);
 if(location.protocol==="http:"||location.protocol==="https:"){
   const sv=$("#swapv");
   sv.style.display="inline-block";
-  sv.onclick=()=>{ location.href="index.html?v=desktop&rev=directory-summary-3"; };
+  sv.onclick=()=>{ location.href="index.html?v=desktop&rev=device-auto-4"; };
 }
 render();
 </script>

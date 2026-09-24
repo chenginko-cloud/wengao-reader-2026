@@ -6,6 +6,20 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>全部文稿总库 · 桌面版</title>
+<script>
+(function(){
+  if(location.protocol!=="http:"&&location.protocol!=="https:")return;
+  if(new URLSearchParams(location.search).get("mode")==="desktop")return;
+  var ua=navigator.userAgent||"";
+  var mobileUA=/Android|iPhone|iPod|iPad|Mobile|HarmonyOS|Tablet|Windows Phone/i.test(ua);
+  var iPadOS=/Macintosh/.test(ua)&&navigator.maxTouchPoints>1;
+  var uaDataMobile=!!(navigator.userAgentData&&navigator.userAgentData.mobile);
+  var coarse=matchMedia("(pointer: coarse)").matches||matchMedia("(any-pointer: coarse)").matches;
+  var mobile=mobileUA||uaDataMobile||iPadOS||innerWidth<820||
+    (coarse&&Math.min(screen.width||9999,screen.height||9999)<1100);
+  if(mobile)location.replace("mobile.html?rev=device-auto-4");
+})();
+</script>
 <style>
 :root{
   --bg:#f4f5f7; --panel:#fff; --line:#e5e7eb; --line2:#eef0f3;
@@ -161,7 +175,7 @@ button{cursor:pointer;border:0;background:none}
     <select id="per">
       <option>20</option><option selected>50</option><option>100</option><option>200</option>
     </select>
-    <a class="swapv" id="swapv" href="index.html?v=mobile&rev=directory-summary-3">手机版 ›</a>
+    <a class="swapv" id="swapv" href="index.html?v=mobile&rev=device-auto-4">手机版 ›</a>
   </div>
   <div class="crumbs" id="crumbs"></div>
   <div class="listwrap" id="listwrap"></div>
