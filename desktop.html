@@ -166,11 +166,9 @@ button{cursor:pointer;border:0;background:none}
     <div class="sp"></div>
     <label>排序</label>
     <select id="sort">
-      <option value="default">来源默认序</option>
+      <option value="mixed">博主乱序</option>
       <option value="han-">字数：多 → 少</option>
       <option value="han+">字数：少 → 多</option>
-      <option value="title">标题：拼音序</option>
-      <option value="src">按来源库归组</option>
     </select>
     <label>每页</label>
     <select id="per">
@@ -205,12 +203,27 @@ button{cursor:pointer;border:0;background:none}
 const DATA = JSON.parse(document.getElementById("d").textContent);
 const DIMS = DATA.dims, ITEMS = DATA.items;
 const SRC=DIMS.src, BLOGGER=DIMS.blogger, BIG=DIMS.big, TOPIC=DIMS.topic,
-      SERIES=DIMS.series, BUCKET=DIMS.bucket, TAG=DIMS.tag;
-const TAGIDX=new Map(TAG.map((t,i)=>[t,i]));
+      SERIES=DIMS.series, BUCKET=DIMS.bucket;
 const X = ITEMS.map(a=>({t:a[0],src:a[1],bg:a[2],big:a[3],tp:a[4],se:a[5],
                          han:a[6],bk:a[7],tg:a[8],dup:a[9],s:a[10],
-                         sh:a[11]|0, off:a[12]|0,
-                         xg:(a[8]?String(a[8]).split(","):[]).map(t=>TAGIDX.get(t)).filter(v=>v!==undefined)}));
+                         sh:a[11]|0, off:a[12]|0}));
+const MIXED_ORDER=(()=>{
+  const groups=BLOGGER.map(()=>[]);
+  X.forEach((it,i)=>groups[it.bg].push(i));
+  const shuffle=a=>{for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];
+  }return a;};
+  groups.forEach(shuffle);
+  const order=[];
+  let active=groups.map((g,i)=>g.length?i:-1).filter(i=>i>=0);
+  while(active.length){
+    shuffle(active);
+    const next=[];
+    for(const i of active){order.push(groups[i].pop()); if(groups[i].length) next.push(i);}
+    active=next;
+  }
+  return order;
+})();
 /* 摘要单独加载：首屏只需前 40 篇，搜索时保证完整摘要已就绪。 */
 let summariesReady=false, summaryPromise=null;
 function ensureSummaries(){
@@ -247,15 +260,14 @@ const B64 = "";
 let BODIES=null, bodying=null, FULL=null;
 
 /* ================= 状态 ================= */
-const S={src:new Set(),big:new Set(),topic:new Set(),blogger:new Set(),series:new Set(),
-         bucket:new Set(),tag:new Set(),kw:"",deep:false,sort:"default",per:50,page:1};
+const S={src:new Set(),big:new Set(),topic:new Set(),blogger:new Set(),
+         bucket:new Set(),kw:"",deep:false,sort:"mixed",per:50,page:1};
 let VIEW=[];           // 当前结果（X 的下标序列）
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=n=>Number(n).toLocaleString("en-US");
 const topicsOf=it=>it.tp?String(it.tp).split(",").map(Number):[];
-const tagsOf=it=>it.tg?String(it.tg).split(","):[];
 const seriesName=it=>it.se<0?"":SERIES[it.se];
 function hint(m,ms){const h=$("#hint");h.textContent=m;h.classList.add("on");
   clearTimeout(h._t);h._t=setTimeout(()=>h.classList.remove("on"),ms||2000);}
@@ -267,9 +279,7 @@ function pass(i,skip){
   if(skip!=="big" && S.big.size && !S.big.has(it.big)) return false;
   if(skip!=="topic" && S.topic.size && !topicsOf(it).some(t=>S.topic.has(t))) return false;
   if(skip!=="blogger" && S.blogger.size && !S.blogger.has(it.bg)) return false;
-  if(skip!=="series" && S.series.size && !S.series.has(it.se)) return false;
   if(skip!=="bucket" && S.bucket.size && !S.bucket.has(it.bk)) return false;
-  if(skip!=="tag" && S.tag.size && !it.xg.some(t=>S.tag.has(t))) return false;
   if(S.kw){
     const k=S.kw.toLowerCase();
     let hay=(it.t+" "+it.s+" "+BLOGGER[it.bg]+" "+SRC[it.src]+" "+it.tg+" "+
@@ -290,9 +300,7 @@ function counts(skip){
     if(all||skip==="big")     c["b"+it.big]=(c["b"+it.big]||0)+1;
     if(all||skip==="topic")   topicsOf(it).forEach(t=>c["t"+t]=(c["t"+t]||0)+1);
     if(all||skip==="blogger") c["g"+it.bg]=(c["g"+it.bg]||0)+1;
-    if(all||skip==="series")  c["e"+it.se]=(c["e"+it.se]||0)+1;
     if(all||skip==="bucket")  c["k"+it.bk]=(c["k"+it.bk]||0)+1;
-    if(all||skip==="tag")     it.xg.forEach(t=>c["x"+t]=(c["x"+t]||0)+1);
   }
   return c;
 }
@@ -314,9 +322,6 @@ function visibleBloggers(){
 }
 
 /* ================= 筛选栏渲染 ================= */
-const CLRKEY={"①":["src","① 内容库"],"②":["big","② 主题大类"],"③":["topic","③ 细分主题"],
-  "④":["blogger","④ 博主 / 作者"],"⑤":["series","⑤ 系列 / 合集"],"⑥":["bucket","⑥ 字数档"],
-  "⑦":["tag","⑦ 热门标签"]};
 function chipHTML(k,i,label,n,color){
   const sel=S[k].has(i)?" sel":"", z=(!n&&!S[k].has(i))?" zero":"";
   const dot=color?'<i class="dot" style="background:'+color+'"></i>':"";
@@ -353,23 +358,10 @@ function renderFilters(){
   vg.forEach(o=>{inner+=chipHTML("blogger",o.i,BLOGGER[o.i],o.n);});
   h+=grp("blogger","④ 博主 / 作者",inner+"</div>");
 
-  const ec=counts("series");
-  inner='<div class="chips">';
-  SERIES.forEach((s,i)=>{inner+=chipHTML("series",i,s,ec["e"+i]||0);});
-  h+=grp("series","⑤ 系列 / 合集",inner+"</div>");
-
   const kc=counts("bucket");
   inner='<div class="chips">';
   BUCKET.forEach((b,i)=>{inner+=chipHTML("bucket",i,b,kc["k"+i]||0);});
-  h+=grp("bucket","⑥ 字数档",inner+"</div>");
-
-  const xc=counts("tag");
-  inner='<div class="chips subchips">';
-  let shown=0;
-  TAG.forEach((t,i)=>{const n=xc["x"+i]||0;
-    if(n<3&&!S.tag.has(i)) return; shown++; inner+=chipHTML("tag",i,t,n);});
-  if(!shown) inner+='<span style="font-size:12.5px;color:#8b95a1">当前条件下没有可用标签</span>';
-  h+=grp("tag","⑦ 热门标签（随筛选动态）",inner+"</div>");
+  h+=grp("bucket","⑤ 字数档",inner+"</div>");
 
   const host=$("#filters"); host.innerHTML=h;
   host.querySelectorAll(".chip").forEach(el=>el.onclick=()=>{
@@ -386,13 +378,10 @@ function renderFilters(){
 
 /* ================= 列表 ================= */
 function compute(){
-  VIEW=[];
-  for(let i=0;i<X.length;i++) if(pass(i,"none")) VIEW.push(i);
+  VIEW=MIXED_ORDER.filter(i=>pass(i,"none"));
   const s=S.sort;
   if(s==="han-") VIEW.sort((a,b)=>X[b].han-X[a].han);
   else if(s==="han+") VIEW.sort((a,b)=>X[a].han-X[b].han);
-  else if(s==="title") VIEW.sort((a,b)=>X[a].t.localeCompare(X[b].t,"zh-Hans-CN"));
-  else if(s==="src") VIEW.sort((a,b)=>(X[a].src-X[b].src)||(a-b));
 }
 function rowHTML(i,rank){
   const it=X[i], col=BIGCOLOR[BIG[it.big]]||["#f1f3f6","#5c6570"];
@@ -413,9 +402,7 @@ function renderCrumbs(){
   S.big.forEach(i=>add("big",i,BIG[i]));
   S.topic.forEach(i=>add("topic",i,TOPIC[i]));
   S.blogger.forEach(i=>add("blogger",i,BLOGGER[i]));
-  S.series.forEach(i=>add("series",i,SERIES[i]));
   S.bucket.forEach(i=>add("bucket",i,BUCKET[i]));
-  S.tag.forEach(i=>add("tag","#"+TAG[i]));
   if(S.kw) out.push('<span class="cr" data-k="kw" data-v="0">关键词：'+esc(S.kw)+' ×</span>');
   const el=$("#crumbs"); el.innerHTML=out.join("");
   el.querySelectorAll(".cr").forEach(c=>c.onclick=()=>{
@@ -573,7 +560,7 @@ $("#deep").onchange=e=>{
 $("#sort").onchange=e=>{S.sort=e.target.value; S.page=1; render();};
 $("#per").onchange=e=>{S.per=+e.target.value; S.page=1; render();};
 $("#resetAll").onclick=()=>{
-  ["src","big","topic","blogger","series","bucket","tag"].forEach(k=>S[k].clear());
+  ["src","big","topic","blogger","bucket"].forEach(k=>S[k].clear());
   S.kw=""; $("#kw").value=""; $("#deep").checked=false; S.deep=false; S.page=1;
   render(); hint("已清空全部筛选");
 };

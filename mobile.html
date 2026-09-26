@@ -159,11 +159,9 @@ body.drawn .filterEdge,body.reading .filterEdge{pointer-events:none;visibility:h
   </button>
   <div class="sp"></div>
   <select class="sortSel" id="sort">
-    <option value="default">默认序</option>
+    <option value="mixed">博主乱序</option>
     <option value="han-">字数多→少</option>
     <option value="han+">字数少→多</option>
-    <option value="title">标题序</option>
-    <option value="src">按来源</option>
   </select>
 </div>
 
@@ -207,12 +205,27 @@ body.drawn .filterEdge,body.reading .filterEdge{pointer-events:none;visibility:h
 const DATA=JSON.parse(document.getElementById("d").textContent);
 const DIMS=DATA.dims, ITEMS=DATA.items;
 const SRC=DIMS.src, BLOGGER=DIMS.blogger, BIG=DIMS.big, TOPIC=DIMS.topic,
-      SERIES=DIMS.series, BUCKET=DIMS.bucket, TAG=DIMS.tag;
-const TAGIDX=new Map(TAG.map((t,i)=>[t,i]));
+      SERIES=DIMS.series, BUCKET=DIMS.bucket;
 const X=ITEMS.map(a=>({t:a[0],src:a[1],bg:a[2],big:a[3],tp:a[4],se:a[5],
                        han:a[6],bk:a[7],tg:a[8],dup:a[9],s:a[10],
-                       sh:a[11]|0, off:a[12]|0,
-                         xg:(a[8]?String(a[8]).split(","):[]).map(t=>TAGIDX.get(t)).filter(v=>v!==undefined)}));
+                       sh:a[11]|0, off:a[12]|0}));
+const MIXED_ORDER=(()=>{
+  const groups=BLOGGER.map(()=>[]);
+  X.forEach((it,i)=>groups[it.bg].push(i));
+  const shuffle=a=>{for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];
+  }return a;};
+  groups.forEach(shuffle);
+  const order=[];
+  let active=groups.map((g,i)=>g.length?i:-1).filter(i=>i>=0);
+  while(active.length){
+    shuffle(active);
+    const next=[];
+    for(const i of active){order.push(groups[i].pop()); if(groups[i].length) next.push(i);}
+    active=next;
+  }
+  return order;
+})();
 /* 摘要单独加载：首屏只需前 40 篇，搜索时保证完整摘要已就绪。 */
 let summariesReady=false, summaryPromise=null;
 function ensureSummaries(){
@@ -249,14 +262,13 @@ const B64="";
 let BODIES=null, bodying=null, FULL=null;
 
 /* ================= 状态 ================= */
-const S={src:new Set(),big:new Set(),topic:new Set(),blogger:new Set(),series:new Set(),
-         bucket:new Set(),tag:new Set(),kw:"",deep:false,sort:"default",limit:40};
+const S={src:new Set(),big:new Set(),topic:new Set(),blogger:new Set(),
+         bucket:new Set(),kw:"",deep:false,sort:"mixed",limit:40};
 let VIEW=[];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=n=>Number(n).toLocaleString("en-US");
 const topicsOf=it=>it.tp?String(it.tp).split(",").map(Number):[];
-const tagsOf=it=>it.tg?String(it.tg).split(","):[];
 const seriesName=it=>it.se<0?"":SERIES[it.se];
 function toast(m,ms){const t=$("#toast");t.textContent=m;t.classList.add("on");
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),ms||1900);}
@@ -268,9 +280,7 @@ function pass(i,skip){
   if(skip!=="big"&&S.big.size&&!S.big.has(it.big)) return false;
   if(skip!=="topic"&&S.topic.size&&!topicsOf(it).some(t=>S.topic.has(t))) return false;
   if(skip!=="blogger"&&S.blogger.size&&!S.blogger.has(it.bg)) return false;
-  if(skip!=="series"&&S.series.size&&!S.series.has(it.se)) return false;
   if(skip!=="bucket"&&S.bucket.size&&!S.bucket.has(it.bk)) return false;
-  if(skip!=="tag"&&S.tag.size&&!it.xg.some(t=>S.tag.has(t))) return false;
   if(S.kw){
     const k=S.kw.toLowerCase();
     const hay=(it.t+" "+it.s+" "+BLOGGER[it.bg]+" "+SRC[it.src]+" "+it.tg+" "+
@@ -291,9 +301,7 @@ function counts(skip){
     if(all||skip==="big")     c["b"+it.big]=(c["b"+it.big]||0)+1;
     if(all||skip==="topic")   topicsOf(it).forEach(t=>c["t"+t]=(c["t"+t]||0)+1);
     if(all||skip==="blogger") c["g"+it.bg]=(c["g"+it.bg]||0)+1;
-    if(all||skip==="series")  c["e"+it.se]=(c["e"+it.se]||0)+1;
     if(all||skip==="bucket")  c["k"+it.bk]=(c["k"+it.bk]||0)+1;
-    if(all||skip==="tag")     it.xg.forEach(t=>c["x"+t]=(c["x"+t]||0)+1);
   }
   return c;
 }
@@ -349,23 +357,10 @@ function renderFilters(){
   vg.forEach(o=>{inner+=chipHTML("blogger",o.i,BLOGGER[o.i],o.n);});
   h+=grp("blogger","④ 博主 / 作者",inner+"</div>");
 
-  const ec=counts("series");
-  inner='<div class="chips">';
-  SERIES.forEach((s,i)=>{inner+=chipHTML("series",i,s,ec["e"+i]||0);});
-  h+=grp("series","⑤ 系列 / 合集",inner+"</div>");
-
   const kc=counts("bucket");
   inner='<div class="chips">';
   BUCKET.forEach((b,i)=>{inner+=chipHTML("bucket",i,b,kc["k"+i]||0);});
-  h+=grp("bucket","⑥ 字数档",inner+"</div>");
-
-  const xc=counts("tag");
-  inner='<div class="chips subchips">';
-  let shown=0;
-  TAG.forEach((t,i)=>{const n=xc["x"+i]||0; if(n<3&&!S.tag.has(i)) return;
-    shown++; inner+=chipHTML("tag",i,t,n);});
-  if(!shown) inner+='<span style="font-size:13px;color:#8b95a1">当前条件下没有可用标签</span>';
-  h+=grp("tag","⑦ 热门标签（随筛选动态）",inner+"</div>");
+  h+=grp("bucket","⑤ 字数档",inner+"</div>");
 
   const host=$("#filters"); host.innerHTML=h;
   host.querySelectorAll(".chip").forEach(el=>el.onclick=()=>{
@@ -381,13 +376,10 @@ function renderFilters(){
 
 /* ================= 列表 ================= */
 function compute(){
-  VIEW=[];
-  for(let i=0;i<X.length;i++) if(pass(i,"none")) VIEW.push(i);
+  VIEW=MIXED_ORDER.filter(i=>pass(i,"none"));
   const s=S.sort;
   if(s==="han-") VIEW.sort((a,b)=>X[b].han-X[a].han);
   else if(s==="han+") VIEW.sort((a,b)=>X[a].han-X[b].han);
-  else if(s==="title") VIEW.sort((a,b)=>X[a].t.localeCompare(X[b].t,"zh-Hans-CN"));
-  else if(s==="src") VIEW.sort((a,b)=>(X[a].src-X[b].src)||(a-b));
 }
 function itemHTML(i){
   const it=X[i], col=BIGCOLOR[BIG[it.big]]||["#f1f3f6","#5c6570"];
@@ -408,9 +400,7 @@ function btnText(){
   if(S.big.size) parts.push(S.big.size===1?BIG[[...S.big][0]]:S.big.size+" 个大类");
   if(S.topic.size) parts.push(S.topic.size+" 个细分");
   if(S.blogger.size) parts.push(S.blogger.size===1?BLOGGER[[...S.blogger][0]]:S.blogger.size+" 位博主");
-  if(S.series.size) parts.push(S.series.size+" 个系列");
   if(S.bucket.size) parts.push(S.bucket.size+" 档字数");
-  if(S.tag.size) parts.push(S.tag.size+" 个标签");
   return parts.length?parts.join(" · "):"筛选与检索";
 }
 function render(){
@@ -480,7 +470,7 @@ drawerEdge.addEventListener("pointermove",e=>{
 drawerEdge.addEventListener("pointerup",()=>{drawerSwipe=null;});
 drawerEdge.addEventListener("pointercancel",()=>{drawerSwipe=null;});
 $("#resetAll").onclick=()=>{
-  ["src","big","topic","blogger","series","bucket","tag"].forEach(k=>S[k].clear());
+  ["src","big","topic","blogger","bucket"].forEach(k=>S[k].clear());
   S.kw=""; $("#kw").value=""; $("#deep").checked=false; S.deep=false;
   resetLimit(); render(); toast("已清空全部筛选");
 };
