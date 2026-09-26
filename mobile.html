@@ -460,14 +460,14 @@ $("#closeD").onclick=closeD;
 $("#scrim").onclick=closeD;
 $("#applyD").onclick=closeD;
 /* 目录左侧 30% 右滑打开筛选抽屉；监听页面而不遮挡列表点按与纵向滚动。 */
-let suppressSwipeClick=false, suppressTimer;
-function suppressClick(){
-  suppressSwipeClick=true;clearTimeout(suppressTimer);
-  suppressTimer=setTimeout(()=>{suppressSwipeClick=false;},450);
+let suppressSwipeTarget=null, suppressTimer;
+function suppressClick(target){
+  suppressSwipeTarget=target;clearTimeout(suppressTimer);
+  suppressTimer=setTimeout(()=>{suppressSwipeTarget=null;},450);
 }
 document.addEventListener("click",e=>{
-  if(!suppressSwipeClick) return;
-  suppressSwipeClick=false;e.preventDefault();e.stopImmediatePropagation();
+  if(!suppressSwipeTarget||!(e.target===suppressSwipeTarget||suppressSwipeTarget.contains(e.target))) return;
+  suppressSwipeTarget=null;e.preventDefault();e.stopImmediatePropagation();
 },true);
 let filterSwipe=null;
 document.addEventListener("pointerdown",e=>{
@@ -480,7 +480,7 @@ document.addEventListener("pointermove",e=>{
   if(!filterSwipe||e.pointerId!==filterSwipe.id) return;
   const dx=e.clientX-filterSwipe.x,dy=e.clientY-filterSwipe.y;
   if(Math.abs(dy)>Math.abs(dx)*1.2&&Math.abs(dy)>12){filterSwipe=null;return;}
-  if(dx>55&&dx>Math.abs(dy)*1.2){filterSwipe=null;suppressClick();openD();}
+  if(dx>55&&dx>Math.abs(dy)*1.2){filterSwipe=null;suppressClick(e.target);openD();}
 });
 document.addEventListener("pointerup",()=>{filterSwipe=null;});
 document.addEventListener("pointercancel",()=>{filterSwipe=null;});
@@ -497,7 +497,7 @@ drawer.addEventListener("pointermove",e=>{
   if(!drawerSwipe||e.pointerId!==drawerSwipe.id) return;
   const dx=e.clientX-drawerSwipe.x,dy=e.clientY-drawerSwipe.y;
   if(Math.abs(dy)>Math.abs(dx)*1.2&&Math.abs(dy)>12){drawerSwipe=null;return;}
-  if(dx < -55&&-dx>Math.abs(dy)*1.2){drawerSwipe=null;suppressClick();closeD();}
+  if(dx < -55&&-dx>Math.abs(dy)*1.2){drawerSwipe=null;suppressClick(e.target);closeD();}
 });
 drawer.addEventListener("pointerup",()=>{drawerSwipe=null;});
 drawer.addEventListener("pointercancel",()=>{drawerSwipe=null;});
@@ -633,8 +633,10 @@ function toClip(t){
 }
 /* 阅读页左侧 30% 右滑返回目录。 */
 const reader=$("#reader");
+let readerSwipeTarget=null;
 reader.addEventListener("pointerdown",e=>{
   if(e.pointerType!=="touch"||e.clientX>innerWidth*.3) return;
+  readerSwipeTarget=e.target;
   dragging=true; dir=null; dx=0; sx=e.clientX; sy=e.clientY;
 });
 reader.addEventListener("pointermove",e=>{
@@ -652,7 +654,7 @@ reader.addEventListener("pointermove",e=>{
 function endDrag(){
   if(!dragging) return; dragging=false;
   reader.classList.remove("drag");
-  if(dir==="h") suppressClick();
+  if(dir==="h") suppressClick(readerSwipeTarget);
   if(dx>110){ reader.style.transform="translateX(100%)";
     setTimeout(()=>closeR(),180); }
   else { reader.style.transform=""; reader.style.boxShadow=""; }
