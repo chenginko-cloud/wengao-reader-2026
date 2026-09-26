@@ -1,0 +1,31 @@
+.editor{position:fixed;inset:0;z-index:100;display:none;justify-content:center;
+  background:rgba(20,24,31,.5);color:#1f2328}
+.editor.open{display:flex}
+.editorSheet{width:min(1040px,100%);height:100%;display:flex;flex-direction:column;
+  background:#fff;box-shadow:0 0 44px rgba(16,24,40,.2)}
+.editbar{display:flex;align-items:center;gap:12px;padding:12px 20px;
+  border-bottom:1px solid #e5e7eb;flex:none}
+.editbar strong{font-size:16px}
+.editbar .space{flex:1}
+.editbar .count{color:#5c6570;font-size:13px;white-space:nowrap}
+.editbar button{padding:7px 14px;border-radius:8px;border:1px solid #d9dee5;
+  background:#fff;color:#333d4a;font:inherit;cursor:pointer}
+.editbar .save{background:#2b5cd9;border-color:#2b5cd9;color:#fff;font-weight:600}
+.editbar button:disabled{opacity:.5;cursor:default}
+.editMain{flex:1;min-height:0;display:flex;flex-direction:column;width:min(810px,100%);
+  margin:0 auto;padding:26px 20px 20px}
+.editTitle{width:100%;border:0;border-bottom:1px solid #e5e7eb;padding:6px 0 18px;
+  outline:none;color:#1f2328;font:700 25px/1.45 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.editTitle:focus{border-color:#2b5cd9}
+.editBody{flex:1;min-height:0;width:100%;resize:none;border:0;outline:none;
+  padding:22px 0 50px;color:#20242b;background:#fff;
+  font:17px/1.95 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+@media(max-width:600px){
+  .editbar{padding:calc(9px + env(safe-area-inset-top)) 12px 10px;gap:7px}
+  .editbar strong{font-size:14px}
+  .editbar button{padding:7px 10px;font-size:13px}
+  .editbar .count{font-size:12px}
+  .editMain{padding:20px 18px 12px}
+  .editTitle{font-size:21px}
+  .editBody{font-size:16px}
+}
