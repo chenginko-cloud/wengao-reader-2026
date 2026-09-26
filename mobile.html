@@ -76,7 +76,7 @@ button{cursor:pointer;border:0;background:none}
 
 /* ================= 抽屉 ================= */
 .scrim{position:fixed;inset:0;background:rgba(18,22,29,.42);opacity:0;pointer-events:none;
-  transition:opacity .26s;z-index:50}
+  transition:opacity .26s;z-index:50;touch-action:pan-y pinch-zoom}
 body.drawn .scrim{opacity:1;pointer-events:auto}
 .drawer{position:fixed;left:0;top:0;bottom:0;width:min(88vw,360px);background:#fff;z-index:60;
   transform:translateX(-101%);transition:transform .28s cubic-bezier(.32,.72,0,1);
@@ -121,7 +121,7 @@ body.drawn .drawer{transform:none}
 
 /* ================= 阅读层 ================= */
 .reader{position:fixed;inset:0;background:#fff;z-index:80;display:none;flex-direction:column;
-  transition:transform .24s ease;touch-action:pan-y pinch-zoom}
+  transition:transform .24s ease}
 .reader.open{display:flex}
 .reader.drag{transition:none}
 .rhead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2);
@@ -138,8 +138,8 @@ body.drawn .drawer{transform:none}
 .art p{margin:0 0 1.05em;text-align:justify;word-break:break-word}
 .loading{padding:70px 0;text-align:center;color:var(--tx3);font-size:14px;line-height:2}
 .edge{position:fixed;left:0;top:0;bottom:0;width:26px;z-index:90;opacity:0;pointer-events:none;
-  display:flex;align-items:center}
-body.reading .edge{opacity:1}
+  touch-action:none;display:flex;align-items:center}
+body.reading .edge{opacity:1;pointer-events:auto}
 .edge i{display:block;width:3.5px;height:46px;border-radius:3px;background:#c3cbd6;margin-left:5px;opacity:.75}
 .filterEdge{position:fixed;left:0;top:calc(var(--hd) + env(safe-area-inset-top));bottom:0;
   width:30px;z-index:45;pointer-events:none}
@@ -484,23 +484,21 @@ document.addEventListener("pointermove",e=>{
 });
 document.addEventListener("pointerup",()=>{filterSwipe=null;});
 document.addEventListener("pointercancel",()=>{filterSwipe=null;});
-/* 筛选抽屉右侧 30% 左滑返回目录。 */
-const drawer=$(".drawer");
+/* 屏幕右侧 30% 左滑返回目录，抽屉内外均可起滑。 */
 let drawerSwipe=null;
-drawer.addEventListener("pointerdown",e=>{
+document.addEventListener("pointerdown",e=>{
   if(e.pointerType!=="touch"||!document.body.classList.contains("drawn")) return;
-  const bounds=drawer.getBoundingClientRect();
-  if(e.clientX<bounds.right-bounds.width*.3) return;
+  if(e.clientX<innerWidth*.7) return;
   drawerSwipe={id:e.pointerId,x:e.clientX,y:e.clientY};
 });
-drawer.addEventListener("pointermove",e=>{
+document.addEventListener("pointermove",e=>{
   if(!drawerSwipe||e.pointerId!==drawerSwipe.id) return;
   const dx=e.clientX-drawerSwipe.x,dy=e.clientY-drawerSwipe.y;
   if(Math.abs(dy)>Math.abs(dx)*1.2&&Math.abs(dy)>12){drawerSwipe=null;return;}
   if(dx < -55&&-dx>Math.abs(dy)*1.2){drawerSwipe=null;suppressClick(e.target);closeD();}
 });
-drawer.addEventListener("pointerup",()=>{drawerSwipe=null;});
-drawer.addEventListener("pointercancel",()=>{drawerSwipe=null;});
+document.addEventListener("pointerup",()=>{drawerSwipe=null;});
+document.addEventListener("pointercancel",()=>{drawerSwipe=null;});
 $("#resetAll").onclick=()=>{
   ["src","big","topic","blogger","bucket"].forEach(k=>S[k].clear());
   S.kw=""; $("#kw").value=""; $("#deep").checked=false; S.deep=false;
@@ -631,21 +629,20 @@ function toClip(t){
   return new Promise(r=>{const a=document.createElement("textarea");a.value=t;
     document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();r();});
 }
-/* 阅读页左侧 30% 右滑返回目录。 */
-const reader=$("#reader");
-let readerSwipeTarget=null;
-reader.addEventListener("pointerdown",e=>{
-  if(e.pointerType!=="touch"||e.clientX>innerWidth*.3) return;
-  readerSwipeTarget=e.target;
+/* 阅读页沿用原来的左侧窄边缘滑动返回。 */
+const edge=$("#edge"), reader=$("#reader");
+edge.addEventListener("pointerdown",e=>{
   dragging=true; dir=null; dx=0; sx=e.clientX; sy=e.clientY;
+  reader.classList.add("drag");
+  try{edge.setPointerCapture(e.pointerId);}catch(_){}
 });
-reader.addEventListener("pointermove",e=>{
+edge.addEventListener("pointermove",e=>{
   if(!dragging) return;
   const mx=e.clientX-sx, my=e.clientY-sy;
   if(dir===null){
     if(Math.abs(mx)<4&&Math.abs(my)<4) return;
-    if(mx<=0||Math.abs(my)>Math.abs(mx)*1.1){ dragging=false; return; }
-    dir="h";reader.classList.add("drag");
+    if(mx<=0||Math.abs(my)>Math.abs(mx)*1.1){ dragging=false; reader.classList.remove("drag"); return; }
+    dir="h";
   }
   dx=Math.max(0,mx);
   reader.style.transform="translateX("+dx+"px)";
@@ -654,16 +651,13 @@ reader.addEventListener("pointermove",e=>{
 function endDrag(){
   if(!dragging) return; dragging=false;
   reader.classList.remove("drag");
-  if(dir==="h") suppressClick(readerSwipeTarget);
   if(dx>110){ reader.style.transform="translateX(100%)";
     setTimeout(()=>closeR(),180); }
   else { reader.style.transform=""; reader.style.boxShadow=""; }
   dx=0;
 }
-reader.addEventListener("pointerup",endDrag);
-reader.addEventListener("pointercancel",()=>{
-  dragging=false;reader.classList.remove("drag");reader.style.transform="";reader.style.boxShadow="";
-});
+edge.addEventListener("pointerup",endDrag);
+edge.addEventListener("pointercancel",endDrag);
 
 /* ================= 首屏 ================= */
 if(location.protocol==="http:"||location.protocol==="https:"){
