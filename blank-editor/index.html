@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>空白文稿库 · 选择界面</title>
+  <script>
+    (function () {
+      const q = new URLSearchParams(location.search);
+      const chosen = q.get('view');
+      const mobile = /Android|iPhone|iPad|iPod|Mobile|Tablet|HarmonyOS/i.test(navigator.userAgent) ||
+        innerWidth < 820 || !!(navigator.userAgentData && navigator.userAgentData.mobile) ||
+        (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
+      location.replace((chosen === 'mobile' || chosen === 'desktop' ? chosen : mobile ? 'mobile' : 'desktop') + '.html');
+    })();
+  </script>
+</head>
+<body>
+  <p>正在打开空白文稿库…… <a href="mobile.html">手机版</a> · <a href="desktop.html">桌面版</a></p>
+</body>
+</html>
