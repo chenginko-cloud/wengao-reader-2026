@@ -56,7 +56,7 @@ button{cursor:pointer;border:0;background:none}
 .sortSel{border:1px solid var(--line);border-radius:999px;padding:6px 8px;font-size:13px;background:#fff;outline:none}
 
 /* ================= 列表 ================= */
-.list{padding:calc(var(--hd) + env(safe-area-inset-top) + 8px) 16px 90px}
+.list{padding:calc(var(--hd) + env(safe-area-inset-top) + 8px) 16px 90px;touch-action:pan-y pinch-zoom}
 .stat{margin:6px 0 14px;font-size:12.5px;color:var(--tx3);line-height:1.8}
 .stat b{color:var(--tx2)}
 .it{display:block;width:100%;text-align:left;padding:14px 0;border-bottom:1px solid var(--line2)}
@@ -80,11 +80,10 @@ button{cursor:pointer;border:0;background:none}
 body.drawn .scrim{opacity:1;pointer-events:auto}
 .drawer{position:fixed;left:0;top:0;bottom:0;width:min(88vw,360px);background:#fff;z-index:60;
   transform:translateX(-101%);transition:transform .28s cubic-bezier(.32,.72,0,1);
-  display:flex;flex-direction:column;box-shadow:6px 0 30px rgba(16,24,40,.16)}
+  display:flex;flex-direction:column;box-shadow:6px 0 30px rgba(16,24,40,.16);touch-action:pan-y pinch-zoom}
 body.drawn .drawer{transform:none}
 .drawerEdge{position:absolute;right:-14px;top:0;bottom:0;width:30px;z-index:2;
-  pointer-events:none;touch-action:pan-y}
-body.drawn .drawerEdge{pointer-events:auto}
+  pointer-events:none}
 .drawerEdge::after{content:"";position:absolute;right:11px;top:45%;width:3px;height:42px;
   border-radius:3px;background:#c3cbd6;opacity:.72}
 .dhead{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;
@@ -122,7 +121,7 @@ body.drawn .drawerEdge{pointer-events:auto}
 
 /* ================= 阅读层 ================= */
 .reader{position:fixed;inset:0;background:#fff;z-index:80;display:none;flex-direction:column;
-  transition:transform .24s ease}
+  transition:transform .24s ease;touch-action:pan-y pinch-zoom}
 .reader.open{display:flex}
 .reader.drag{transition:none}
 .rhead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2);
@@ -139,11 +138,11 @@ body.drawn .drawerEdge{pointer-events:auto}
 .art p{margin:0 0 1.05em;text-align:justify;word-break:break-word}
 .loading{padding:70px 0;text-align:center;color:var(--tx3);font-size:14px;line-height:2}
 .edge{position:fixed;left:0;top:0;bottom:0;width:26px;z-index:90;opacity:0;pointer-events:none;
-  touch-action:none;display:flex;align-items:center}
-body.reading .edge{opacity:1;pointer-events:auto}
+  display:flex;align-items:center}
+body.reading .edge{opacity:1}
 .edge i{display:block;width:3.5px;height:46px;border-radius:3px;background:#c3cbd6;margin-left:5px;opacity:.75}
 .filterEdge{position:fixed;left:0;top:calc(var(--hd) + env(safe-area-inset-top));bottom:0;
-  width:30px;z-index:45;touch-action:pan-y}
+  width:30px;z-index:45;pointer-events:none}
 .filterEdge::after{content:"";position:absolute;left:4px;top:45%;height:42px;width:3px;
   border-radius:3px;background:#c3cbd6;opacity:.65;pointer-events:none}
 body.drawn .filterEdge,body.reading .filterEdge{pointer-events:none;visibility:hidden}
@@ -460,39 +459,48 @@ $("#openD").onclick=openD;
 $("#closeD").onclick=closeD;
 $("#scrim").onclick=closeD;
 $("#applyD").onclick=closeD;
-/* 主页面左边缘向右滑动，打开筛选抽屉。纵向滚动仍由浏览器处理。 */
-const filterEdge=$("#filterEdge");
+/* 目录左侧 30% 右滑打开筛选抽屉；监听页面而不遮挡列表点按与纵向滚动。 */
+let suppressSwipeClick=false, suppressTimer;
+function suppressClick(){
+  suppressSwipeClick=true;clearTimeout(suppressTimer);
+  suppressTimer=setTimeout(()=>{suppressSwipeClick=false;},450);
+}
+document.addEventListener("click",e=>{
+  if(!suppressSwipeClick) return;
+  suppressSwipeClick=false;e.preventDefault();e.stopImmediatePropagation();
+},true);
 let filterSwipe=null;
-filterEdge.addEventListener("pointerdown",e=>{
+document.addEventListener("pointerdown",e=>{
   if(e.pointerType!=="touch"||document.body.classList.contains("drawn")||
-     document.body.classList.contains("reading")) return;
+     document.body.classList.contains("reading")||
+     $("#editor").classList.contains("open")||e.clientX>innerWidth*.3) return;
   filterSwipe={id:e.pointerId,x:e.clientX,y:e.clientY};
-  try{filterEdge.setPointerCapture(e.pointerId);}catch(_){}
 });
-filterEdge.addEventListener("pointermove",e=>{
+document.addEventListener("pointermove",e=>{
   if(!filterSwipe||e.pointerId!==filterSwipe.id) return;
   const dx=e.clientX-filterSwipe.x,dy=e.clientY-filterSwipe.y;
   if(Math.abs(dy)>Math.abs(dx)*1.2&&Math.abs(dy)>12){filterSwipe=null;return;}
-  if(dx>55&&dx>Math.abs(dy)*1.2){filterSwipe=null;openD();}
+  if(dx>55&&dx>Math.abs(dy)*1.2){filterSwipe=null;suppressClick();openD();}
 });
-filterEdge.addEventListener("pointerup",()=>{filterSwipe=null;});
-filterEdge.addEventListener("pointercancel",()=>{filterSwipe=null;});
-/* 筛选抽屉右边缘向左滑动，返回主页面。 */
-const drawerEdge=$("#drawerEdge");
+document.addEventListener("pointerup",()=>{filterSwipe=null;});
+document.addEventListener("pointercancel",()=>{filterSwipe=null;});
+/* 筛选抽屉右侧 30% 左滑返回目录。 */
+const drawer=$(".drawer");
 let drawerSwipe=null;
-drawerEdge.addEventListener("pointerdown",e=>{
+drawer.addEventListener("pointerdown",e=>{
   if(e.pointerType!=="touch"||!document.body.classList.contains("drawn")) return;
+  const bounds=drawer.getBoundingClientRect();
+  if(e.clientX<bounds.right-bounds.width*.3) return;
   drawerSwipe={id:e.pointerId,x:e.clientX,y:e.clientY};
-  try{drawerEdge.setPointerCapture(e.pointerId);}catch(_){}
 });
-drawerEdge.addEventListener("pointermove",e=>{
+drawer.addEventListener("pointermove",e=>{
   if(!drawerSwipe||e.pointerId!==drawerSwipe.id) return;
   const dx=e.clientX-drawerSwipe.x,dy=e.clientY-drawerSwipe.y;
   if(Math.abs(dy)>Math.abs(dx)*1.2&&Math.abs(dy)>12){drawerSwipe=null;return;}
-  if(dx < -55&&-dx>Math.abs(dy)*1.2){drawerSwipe=null;closeD();}
+  if(dx < -55&&-dx>Math.abs(dy)*1.2){drawerSwipe=null;suppressClick();closeD();}
 });
-drawerEdge.addEventListener("pointerup",()=>{drawerSwipe=null;});
-drawerEdge.addEventListener("pointercancel",()=>{drawerSwipe=null;});
+drawer.addEventListener("pointerup",()=>{drawerSwipe=null;});
+drawer.addEventListener("pointercancel",()=>{drawerSwipe=null;});
 $("#resetAll").onclick=()=>{
   ["src","big","topic","blogger","bucket"].forEach(k=>S[k].clear());
   S.kw=""; $("#kw").value=""; $("#deep").checked=false; S.deep=false;
@@ -623,20 +631,19 @@ function toClip(t){
   return new Promise(r=>{const a=document.createElement("textarea");a.value=t;
     document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();r();});
 }
-/* ---- 左边缘滑动返回 ---- */
-const edge=$("#edge"), reader=$("#reader");
-edge.addEventListener("pointerdown",e=>{
+/* 阅读页左侧 30% 右滑返回目录。 */
+const reader=$("#reader");
+reader.addEventListener("pointerdown",e=>{
+  if(e.pointerType!=="touch"||e.clientX>innerWidth*.3) return;
   dragging=true; dir=null; dx=0; sx=e.clientX; sy=e.clientY;
-  reader.classList.add("drag");
-  try{ edge.setPointerCapture(e.pointerId); }catch(_){}
 });
-edge.addEventListener("pointermove",e=>{
+reader.addEventListener("pointermove",e=>{
   if(!dragging) return;
   const mx=e.clientX-sx, my=e.clientY-sy;
   if(dir===null){
     if(Math.abs(mx)<4&&Math.abs(my)<4) return;
-    if(mx<=0||Math.abs(my)>Math.abs(mx)*1.1){ dragging=false; reader.classList.remove("drag"); return; }
-    dir="h";
+    if(mx<=0||Math.abs(my)>Math.abs(mx)*1.1){ dragging=false; return; }
+    dir="h";reader.classList.add("drag");
   }
   dx=Math.max(0,mx);
   reader.style.transform="translateX("+dx+"px)";
@@ -645,13 +652,16 @@ edge.addEventListener("pointermove",e=>{
 function endDrag(){
   if(!dragging) return; dragging=false;
   reader.classList.remove("drag");
+  if(dir==="h") suppressClick();
   if(dx>110){ reader.style.transform="translateX(100%)";
     setTimeout(()=>closeR(),180); }
   else { reader.style.transform=""; reader.style.boxShadow=""; }
   dx=0;
 }
-edge.addEventListener("pointerup",endDrag);
-edge.addEventListener("pointercancel",endDrag);
+reader.addEventListener("pointerup",endDrag);
+reader.addEventListener("pointercancel",()=>{
+  dragging=false;reader.classList.remove("drag");reader.style.transform="";reader.style.boxShadow="";
+});
 
 /* ================= 首屏 ================= */
 if(location.protocol==="http:"||location.protocol==="https:"){
